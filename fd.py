@@ -53,11 +53,23 @@ print("""
 
                  """)
 print("                                                                 ")
-print("                                        程序启动成功,3秒后开始采集   ")
+print("                                          ")
 print("\r")
 print("\r")
 print("\r")
 time.sleep(3)
+
+index="http://ask.familydoctor.com.cn/category"
+IndexHtml=HttpGet(index)
+UrlList=IndexHtml.find(".ly-page-group").find("a")
+for item in UrlList.items():
+   time.sleep(10)
+   BigList = "http://ask.familydoctor.com.cn/q/"+item.attr("href")[40:]+"d"
+   SmList=HttpGet(BigList)
+   print(SmList.find(".ly-list-href").text())
+
+
+res=input()
 
 
 
