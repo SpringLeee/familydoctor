@@ -63,13 +63,16 @@ index="http://ask.familydoctor.com.cn/category"
 IndexHtml=HttpGet(index)
 UrlList=IndexHtml.find(".ly-page-group").find("a")
 for item in UrlList.items():
-   time.sleep(10)
-   BigList = "http://ask.familydoctor.com.cn/q/"+item.attr("href")[40:]+"d"
-   SmList=HttpGet(BigList)
-   print(SmList.find(".ly-list-href").text())
+	if item.attr("href")=="http://ask.familydoctor.com.cn/did/939":
+	    continue
+	
+	BigList = "http://ask.familydoctor.com.cn/q/"+item.attr("href")[40:]+"d"
+	SmList=HttpGet(BigList)
+	print(SmList.find(".ly-list-href").text())
+	
+  
 
-
-res=input()
+res=input("===================================================")
 
 
 
