@@ -27,6 +27,9 @@ def Md5(str):
     m.update(str.encode("utf8"))
     return m.hexdigest() 
 
+
+
+
 print("                                                                 ")
 print("        =========================================================================================================")
 print("""
@@ -57,21 +60,138 @@ print("                                          ")
 print("\r")
 print("\r")
 print("\r")
-time.sleep(3)
 
+
+print(" 正在读取分词库...........")
+dededata = xlrd.open_workbook('dededic.xlsx')
+dedetable = dededata.sheets()[0]  
+dederesult= dedetable.col_values(1)
+print(" Success！")
+
+
+
+
+
+
+# -------------------------- 爬虫代码开始 -------------------------------------------
+
+
+# 先爬首页 获取首页的大分类
 index="http://ask.familydoctor.com.cn/category"
 IndexHtml=HttpGet(index)
 UrlList=IndexHtml.find(".ly-page-group").find("a")
-for item in UrlList.items():
-	if item.attr("href")=="http://ask.familydoctor.com.cn/did/939":
+
+
+con = pymysql.connect(user='shrxctest', password='Aaa19830820', database='testcodefirst',host='rxcpt001.mysql.rds.aliyuncs.com',charset='utf8')
+cur =con.cursor() 
+
+
+Urls=[]
+for item in UrlList.items():   
+
+    # 循环大分类的每一项   列如： http://ask.familydoctor.com.cn/category/1/
+    #  把 http://ask.familydoctor.com.cn/category/1/ 拼接成 http://ask.familydoctor.com.cn/q/1/d
+
+	if item.attr("href")=="http://ask.familydoctor.com.cn/did/939":  
 	    continue
 	BigList = "http://ask.familydoctor.com.cn/q/"+item.attr("href")[40:]+"d"
-	SmList=HttpGet(BigList).find("a")
-	
+
+
+    # 进去到 http://ask.familydoctor.com.cn/q/1/d ，获取里面的小分类
+
+	SmList=HttpGet(BigList).find(".ly-list-href").find("a")
 	for item in SmList.items():
-		print(item)
-	
-  
+
+		# 循环爬取每个小分类 列如：http://ask.familydoctor.com.cn/did/3203
+		ItemHtml= HttpGet(item.attr("href")) 
+
+		# 解析页面判断 【尾页】 是哪一页
+		End=ItemHtml.find("#anpSelectData_Settings").find("a").eq(-1).attr("href")   
+		if End==None:
+			continue
+		Endnum = int(End[len(item.attr("href"))+6:][::-1][1:][::-1]) 
+
+
+		# 循环 1 -- 尾页   
+
+
+
+		for x in range(1,Endnum):
+
+
+
+			xurl=item.attr("href")+"?page="+str(x)+"&"
+
+            # 进入到 http://ask.familydoctor.com.cn/did/894?page=2& 这样的页面 
+			xhtml=HttpGet(xurl)
+
+
+			# 获取每个问题的url
+			answerUrlitems=xhtml.find(".faq-list").find("dl").find("a")
+			for x in answerUrlitems.items():
+				xHtml=HttpGet(x.attr("href"))
+
+
+				# ----------------- 解析页面 开始数据采集 ------------------
+
+				title=xHtml.find(".quest-title").text()
+				question=xHtml.find(".illness-pics").find("p").text()
+
+				# 结巴分词 获取关键字
+				fenci=[]
+				seg_list = jieba.cut(title)
+				jiebares=",".join(seg_list).split(',')
+				for jb in jiebares:
+				    for dede in dederesult:
+				        if jb==dede:
+				            fenci.append(jb)
+
+				keyword=','.join(fenci) 
+
+				classname=xHtml.find(".illness-type").find("a").text()
+				department=xHtml.find("#crumbs").find("em").eq(-1).find("a").text()
+				source="家庭医生网"
+				updatetime = datetime.datetime.now()
+				qaid=Md5(x.attr("href"))
+				url=x.attr("href")
+
+				# 插入数据库 - 问题question
+				cur.execute('''insert into question 
+					(title,question,keyword,classname,department,updatetime,source,qaid,url) 
+					values (%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+					[title,question,keyword,classname,department,updatetime,source,qaid,url])
+				con.commit()
+				
+
+
+				# 循环所有的答案 anwser
+				ans=xHtml.find(".main-small").find(".main-sec").eq(1).find("li")
+				for ansitem in ans.items():
+					print(ansitem)
+				    answerers=ansitem.find(".answer-info-cont").find(".answer-doctor").find("p").eq(0).text()
+					answerer = answerers.split()[0]
+					profession = answerers.split()[1]
+					zhidao= ansitem.find(".answer-words").text()
+					state=0
+					updatetime = datetime.datetime.now()
+					if int(ansitem.find(".answer-judge").find(".icon-good-yellow").text()) > 0:
+						state=1
+					
+
+					# 插入数据库 - 答案answers
+					cur.execute('''
+					 	insert into answer (answerer,profession,major,bingqing,zhidao,state,updatetime,query,qaid) values (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+					 	''',[answerer,"",profession,"",zhidao,state,updatetime,0,qaid])	
+					con.commit()
+					
+				print(zhidao+"入库成功")
+				time.sleep(3)
+
+
+cur.close()
+con.close()
+
+
 
 res=input("===================================================")
 
