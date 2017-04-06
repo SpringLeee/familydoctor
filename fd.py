@@ -21,7 +21,7 @@ def HttpGet(url):
     html=pq(response.read().decode("utf-8"))
     return html
 
-
+  
 def Md5(str):
     m = hashlib.md5()
     m.update(str.encode("utf8"))
