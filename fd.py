@@ -11,7 +11,7 @@ import jieba
 from email.mime.text import MIMEText
 import smtplib
 import base64
- 
+
 
 def HttpGet(url):
     user_agent = 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; 360SE)'
@@ -21,7 +21,7 @@ def HttpGet(url):
     html=pq(response.read().decode("utf-8"))
     return html
 
- 
+
 def Md5(str):
     m = hashlib.md5()
     m.update(str.encode("utf8"))
